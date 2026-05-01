@@ -4,7 +4,7 @@
     "title": "Offer Audit",
     "subtitle": "A one-page operator-grade teardown of the offer, the funnel, and what breaks conversion.",
     "subject": "Name of the offer, page, or business being reviewed",
-    "generated_for": "Optional client or company name",
+    "generated_for": "Internal Use Only, blank, or explicit client/company name — do not use the chat user's name by default",
     "generated_at": "ISO-8601 timestamp or readable date string"
   },
   "verdict": {

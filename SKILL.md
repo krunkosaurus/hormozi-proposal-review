@@ -291,6 +291,7 @@ Use the structured payload so a renderer can generate a polished single-page aud
 - Keep field values concise enough to render well in cards, tables, and callout sections.
 - Prefer arrays of bullets over giant paragraphs where possible.
 - If a field is unknown, leave it empty or state `Unclear from provided materials`.
+- Do not populate `meta.generated_for` with the chat user's name by default. Use `Internal Use Only`, leave it blank, or use an explicit client/company name only when requested.
 
 ### Preferred webpage payload sections
 
