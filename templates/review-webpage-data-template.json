@@ -1,0 +1,94 @@
+{
+  "meta": {
+    "eyebrow": "ALEX HORMOZI METHOD",
+    "title": "Offer Audit",
+    "subtitle": "A one-page operator-grade teardown of the offer, the funnel, and what breaks conversion.",
+    "subject": "Name of the offer, page, or business being reviewed",
+    "generated_for": "Optional client or company name",
+    "generated_at": "ISO-8601 timestamp or readable date string"
+  },
+  "verdict": {
+    "label": "VERDICT",
+    "headline": "One-line verdict",
+    "summary": "A concise paragraph explaining the core reason behind the verdict.",
+    "quote": "Optional pull-quote that crystallizes the main insight."
+  },
+  "dossier": [
+    {"label": "BUYER / ICP", "value": "Primary target buyer"},
+    {"label": "PAIN", "value": "Core pain being solved"},
+    {"label": "DESIRED OUTCOME", "value": "What the buyer wants"},
+    {"label": "MECHANISM", "value": "How the offer claims to solve it"},
+    {"label": "PRICE / TERMS", "value": "Pricing model or current purchase framing"},
+    {"label": "PROOF PRESENT", "value": "Evidence currently present"},
+    {"label": "GUARANTEE", "value": "Risk reversal or lack of it"},
+    {"label": "CTA / NEXT STEP", "value": "What the user is asked to do next"},
+    {
+      "label": "WHAT IS UNCLEAR",
+      "bullets": [
+        "Missing detail 1",
+        "Missing detail 2"
+      ]
+    }
+  ],
+  "scorecard": {
+    "score_obtained": 8,
+    "score_total": 26,
+    "percent": 31,
+    "interpretation": "DO NOT SCALE. REBUILD THE OFFER AND THE PURCHASE FLOW FIRST.",
+    "rows": [
+      {"area": "Market", "score": 2, "status": "Strong", "notes": "Why"},
+      {"area": "Dream Outcome", "score": 1, "status": "Weak", "notes": "Why"}
+    ]
+  },
+  "leaks": [
+    {
+      "title": "Leak title",
+      "evidence": "Concrete evidence from the proposal",
+      "why_it_hurts": "Why this reduces conversion",
+      "principle_violated": "Relevant principle",
+      "fixes": [
+        "Specific fix 1",
+        "Specific fix 2"
+      ]
+    }
+  ],
+  "strengths": [
+    "What is genuinely working and should be preserved"
+  ],
+  "section_rewrites": [
+    {
+      "title": "Headline / Opening",
+      "diagnosis": "What is wrong with the current copy or structure",
+      "before": "Optional current wording or paraphrase",
+      "after": "Recommended rewrite"
+    }
+  ],
+  "pricing": {
+    "title": "Pricing section heading",
+    "intro": "Short explanation of the pricing recommendation",
+    "options": [
+      {
+        "name": "Option A",
+        "bullets": [
+          "Recommendation bullet 1",
+          "Recommendation bullet 2"
+        ]
+      }
+    ]
+  },
+  "action_plan": {
+    "fix_this_first": [
+      "Highest leverage action"
+    ],
+    "then_test": [
+      "Next experiment"
+    ],
+    "do_not_change_yet": [
+      "What to leave alone for now"
+    ],
+    "funnel_flow": [
+      "Optional funnel step 1",
+      "Optional funnel step 2"
+    ]
+  }
+}

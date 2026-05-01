@@ -14,6 +14,8 @@ This skill is designed to:
 - `references/hormozi-playbook.md` — playbook grounding the review logic
 - `references/hormozi-rubric.md` — scoring and diagnostic rubric
 - `templates/review-output-template.md` — standard review output structure
+- `templates/review-webpage-data-template.json` — structured payload schema for local styled audit pages
+- `scripts/render_offer_audit.py` — standalone renderer that turns a structured payload into a polished HTML audit
 
 ## What it reviews
 
@@ -36,6 +38,14 @@ The default review format includes:
 7. Rewrites
 8. Considerations
 9. Highest-leverage next actions
+
+When requested, the skill can also generate a local styled webpage version of the audit:
+
+```bash
+python3 scripts/render_offer_audit.py templates/review-webpage-data-template.json /tmp/offer-audit.html
+```
+
+In practice, create a review-specific JSON payload matching `templates/review-webpage-data-template.json`, then render it with `scripts/render_offer_audit.py`.
 
 ## Installation
 

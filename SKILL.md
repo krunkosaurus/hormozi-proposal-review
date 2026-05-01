@@ -127,6 +127,22 @@ Focus on:
 
 Quote or paraphrase the relevant sections before critiquing them.
 
+### Agency brief enhancement
+When the document is a marketing/design/creative agency brief, do more than critique positioning. Convert the review into a practical agency handoff that can drive execution.
+
+Add or strengthen:
+- the core offer hierarchy: market, dream outcome, proof, time to value, effort/sacrifice, pricing, risk reversal
+- required proof assets before scaling paid ads, especially before/after examples, testimonials, screenshots, or specific proof captions
+- campaign angles ranked by priority, not a scattered list of ideas
+- exact ad copy banks: short headlines, longer headlines, primary text, CTAs, retargeting copy
+- creative format briefs: static ads, UGC video, carousel, landing-page sections, proof placements
+- objection handling and claims guidance so agencies avoid overpromising
+- clear agency deliverables requested, including copy variants, creative concepts, video scripts, landing-page modules, and testing plans
+- measurement notes focused on conversion metrics, not vanity metrics; prefer cost per paid customer, funnel conversion, and preview-to-purchase style metrics when relevant
+- explicit “do/don’t” guardrails that prevent agencies from drifting into generic, pretty-but-useless creative
+
+If the user asks for enhancement, write an improved markdown file rather than only summarizing feedback, and verify the file was written.
+
 ### Image review
 Focus on:
 - headline clarity
@@ -138,6 +154,27 @@ Focus on:
 - whether the page/screen communicates buyer, problem, outcome, and next step quickly
 
 If the visual is only one part of the proposal, explain what can and cannot be inferred from the image alone.
+
+### Website / landing-page review
+When reviewing a live website, do not stop at the homepage or hero section.
+
+Follow the primary CTA path far enough to inspect the real conversion journey, including where possible:
+- homepage or main landing page
+- primary CTA destination
+- pricing or membership details page
+- application / enquiry / booking form
+- FAQ or objections page
+
+Specifically check for:
+- whether pricing is shown, partially anchored, or hidden
+- whether the next step matches buyer temperature
+- whether the form asks for too much too early
+- whether embedded third-party forms/iframes are hiding the real conversion flow; inspect `document.querySelectorAll('iframe')` and open form iframe URLs directly when the modal/page snapshot does not expose fields
+- whether exclusivity language creates desire or just uncertainty
+- whether proof is present near CTA moments, not just in brand copy
+- whether objections are answered where the buyer actually hesitates
+
+For premium or selective offers, distinguish between healthy exclusivity and needless ambiguity. Mystery can help positioning, but if proof and desire are not already strong, hidden pricing and vague qualification language usually create friction rather than prestige.
 
 ### Folder review
 1. Inventory the files.
@@ -226,6 +263,81 @@ Flag these aggressively:
 When invoking this skill, frame the task like:
 
 "Review this proposal using the Hormozi proposal review skill. Be blunt, practical, and evidence-based. Apply the included playbook and rubric. Do not roleplay as Alex Hormozi. Diagnose market, offer, proof, delivery, lead flow, and sales execution in that order. Give concrete rewrites and a considerations section."
+
+## Webpage Output Mode
+
+Default behavior when this skill is used:
+
+1. First deliver the normal human-readable review.
+2. After the review, explicitly ask the user whether they want a local website version of the feedback.
+3. Only generate the structured webpage payload and trigger the rendering flow if the user says yes.
+
+The ask should be simple and direct, for example:
+- `Do you want me to turn this into a local website version of the audit?`
+- `Want this rendered as a local styled audit page too?`
+
+If the user says yes, then produce the review in two layers:
+
+1. the normal human-readable review
+2. a structured payload matching `templates/review-webpage-data-template.json`
+
+Use the structured payload so a renderer can generate a polished single-page audit website without inventing or re-parsing the review.
+
+### Requirements for webpage mode
+
+- Keep the content grounded in the actual review.
+- Do not add sections the review did not support.
+- Preserve the same blunt, practical tone.
+- Keep field values concise enough to render well in cards, tables, and callout sections.
+- Prefer arrays of bullets over giant paragraphs where possible.
+- If a field is unknown, leave it empty or state `Unclear from provided materials`.
+
+### Preferred webpage payload sections
+
+- `meta`
+- `verdict`
+- `dossier`
+- `scorecard`
+- `leaks`
+- `strengths`
+- `section_rewrites`
+- `pricing`
+- `action_plan`
+
+### Renderer notes
+
+- Use `scripts/render_offer_audit.py` to turn the structured payload into standalone HTML.
+- Treat the cleaned static reference site at `/Users/krunkosaurus/Downloads/offer-audit-site-clean` as the base visual source of truth when refining the renderer, but cross-check final polish against the original reference site `https://offer-audit-jxwt37js.manus.space/` when the user asks for closer fidelity. Match the warm editorial audit style rather than inventing a generic dashboard: cream background, centered 896px report column, compact sticky mono nav, serif display headings, dark espresso verdict panel, thin ruled sections, flat bordered grids, orange score accents, and restrained teal callouts.
+- Font sizing should not be too tiny: default body copy around 18px with generous line-height works closer to the original reference than the earlier 17px/dense version. If the user asks to bump size “by two clicks,” use body copy around 20px and widen the report shell at the same time (roughly 1024px page width / 960px inner content) so the page feels intentionally scaled rather than crowded. If they ask for one more overall notch larger after that, use body copy around 21px and widen the report shell again (roughly 1088px page width), then verify section grids still fit without horizontal overflow.
+- When widening the report shell, re-check text measure section-by-section. Do not let full-width cards create long exhausting lines. For leak cards in particular, keep the card full-width but cap the internal text measure around 780px, use about 18px body text with ~1.55–1.6 line-height, warmer/darker body color, calmer mono tracking, and orange arrow bullets for fixes. This preserves the larger page while keeping `04 — Biggest Leaks` readable like the original reference.
+- For the scorecard, prefer the original/clean site's compact `Area / Score / Notes` table pattern, with status shown under the score badge, unless the user explicitly requests a separate status column. Use a thin progress bar, orange uppercase interpretation line, dark espresso table header, pale row fills, and square outlined score badges with state-colored text/borders rather than filled circular pills. On the larger layout, slightly enlarge score badges/status text so they remain legible.
+- Keep dossier content in a flat two-column bordered grid and render `WHAT IS UNCLEAR` as a separate orange left-border callout, not as another dossier cell.
+- Render `Five Critical Revenue Leaks` as pale peach/orange full-width cards with an orange left border and a single-column stack of `EVIDENCE`, `WHY IT HURTS`, `PRINCIPLE VIOLATED`, and `FIX`. Do not use a two-column leak grid; the original reference uses vertical editorial callout cards.
+- Render `06 — Section Critique & Rewrites` with the heading `What to Say Instead` and comparison cards: `CURRENT`/`CURRENT (IMPLIED)` on cream/orange treatment and `BETTER` on pale teal/teal treatment. Avoid generic `Before`/`After` labels unless the user explicitly wants them. Match the original reference's quote-heavy rewrite style: wrap current and better copy in curly quotes, use italic quote treatment for the copy samples, keep current copy muted, and make better/strongest cards feel like direct replacement language rather than commentary. Support an optional third `STRONGEST` teal-emphasis card when payload data includes a stronger variant.
+- For closer fidelity to the cleaned/reference site, mirror these section treatments too: strengths as individual pale green rows with green left borders (not a plain ruled bullet box); pricing as separate bordered cards with gaps and teal mono labels (not a shared table grid); action plan as three separate gap-separated cards with orange/teal/neutral left-border treatments. Inside action plan cards, render list items as clean right-arrow rows, not default bullets: orange arrows for `FIX THIS FIRST`, teal arrows for `THEN TEST THIS`, and muted/tan arrows for `DO NOT CHANGE YET`. Use grid/flex alignment so wrapped action items align under the text rather than under the arrow. Render funnel flow as teal step chips with arrow separators rather than a bullet list.
+- Include the final `Blunt Recommendation` closing block after the funnel flow in the action section. Match the source style: full-width dark espresso card, small mono label, large serif recommendation headline, and muted cream supporting body text. If the payload lacks a dedicated `action_plan.blunt_recommendation`, derive the headline from the verdict quote/headline and the body from the verdict summary rather than omitting the block.
+- Keep the nav/reference shell close to the source: opaque warm cream sticky nav, compact mono nav links, and a strong dark espresso bottom rule when matching the cleaned localhost/reference page.
+- Match the reference site's generous horizontal divider rhythm around section headings: section number labels should not add extra bottom margin; `.rule-divider` should be visually substantial, about 2px high with roughly 40px vertical margin above and below. Avoid cramped `0 0 24px` divider spacing because it makes sections feel compressed versus the original Manus/reference audit page.
+- After renderer changes, regenerate a known payload, render once through the workspace renderer and once through the installed skill renderer, compare with `cmp -s`, then visually inspect the key sections in the browser.
+- Avoid third-party hosted page-builder/runtime scripts in final output; keep the rendered page self-contained.
+
+### Webpage mode prompt pattern
+
+Default interaction pattern:
+
+- Use the skill to deliver the review first.
+- Then ask whether the user wants a local website version of that audit.
+- Only if they say yes, output the structured webpage payload matching `templates/review-webpage-data-template.json` and proceed with local rendering.
+
+Example follow-up line:
+
+`If you want, I can also turn this into a local styled audit webpage.`
+
+If the user explicitly asks for the webpage immediately, you can skip the follow-up question and go straight into webpage mode.
+
+Direct webpage-mode prompt pattern:
+
+"Review this proposal using the Hormozi proposal review skill, then also output a structured webpage payload matching `templates/review-webpage-data-template.json` so the result can be rendered into a polished audit page."
 
 ## Deliverable Standard
 
