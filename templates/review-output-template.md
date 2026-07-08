@@ -29,7 +29,7 @@ Fields:
 
 ## 3. Scorecard
 
-Use either a 0–2 or translated narrative score, but stay grounded in the rubric.
+Use either a 0–2 or translated narrative score, but stay grounded in the rubric. In webpage payloads, include `max_score_per_row` on the scorecard or `score_max` on each row so the renderer can show a line bar for how far along each section is, not just the raw number.
 
 Suggested table:
 

@@ -27,6 +27,45 @@ def slugify(text):
     return slug.strip("-") or "status"
 
 
+def numeric_score(value):
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value or "").strip()
+    if not text:
+        return None
+    if "/" in text:
+        text = text.split("/", 1)[0]
+    text = text.replace("%", "").strip()
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def row_score_max(row, default_max=2):
+    for key in ("score_max", "score_total", "max_score", "total"):
+        value = row.get(key)
+        if value not in (None, ""):
+            parsed = numeric_score(value)
+            if parsed and parsed > 0:
+                return parsed
+    score_text = str(row.get("score", "")).strip()
+    if "/" in score_text:
+        parsed = numeric_score(score_text.split("/", 1)[1])
+        if parsed and parsed > 0:
+            return parsed
+    parsed_default = numeric_score(default_max)
+    return parsed_default if parsed_default and parsed_default > 0 else 2.0
+
+
+def format_score_number(value):
+    if value is None:
+        return "?"
+    if float(value).is_integer():
+        return str(int(value))
+    return f"{value:g}"
+
+
 def render_list(items, cls=""):
     if not items:
         return ""
@@ -56,11 +95,13 @@ def render_unclear_block(item):
     </aside>"""
 
 
-def score_class(score):
-    try:
-        numeric = float(score)
-    except (TypeError, ValueError):
+def score_class(score, max_score=None):
+    numeric = numeric_score(score)
+    if numeric is None:
         return "score-unknown"
+    max_numeric = numeric_score(max_score)
+    if max_numeric and max_numeric > 0 and numeric >= max_numeric:
+        return "score-high"
     if numeric <= 0:
         return "score-zero"
     if numeric <= 1:
@@ -68,13 +109,20 @@ def score_class(score):
     return "score-mid"
 
 
-def render_score_row(row, index):
+def render_score_row(row, index, default_max=2):
     status = row.get("status", "")
     zebra = "row-warm" if index % 2 else "row-cream"
+    score = row.get("score", "")
+    numeric = numeric_score(score)
+    max_score = row_score_max(row, default_max)
+    percent = 0 if numeric is None else max(0, min(100, (numeric / max_score) * 100))
+    score_label = f"{format_score_number(numeric)} / {format_score_number(max_score)}"
     return f"""<div class="score-row {zebra}">
       <span class="score-area">{esc(row.get("area", ""))}</span>
       <div class="score-center">
-        <span class="score-badge {score_class(row.get("score"))}">{esc(row.get("score", ""))}</span>
+        <span class="score-badge {score_class(score, max_score)}">{esc(score)}</span>
+        <div class="score-mini-track" role="img" aria-label="Section score {esc(score_label)}"><div class="score-mini-fill" style="width:{percent:.4g}%;"></div></div>
+        <span class="score-mini-label">{esc(score_label)}</span>
         <span class="score-status status-{esc(slugify(status))}">{esc(status)}</span>
       </div>
       <span class="score-notes">{esc(row.get("notes", ""))}</span>
@@ -163,14 +211,20 @@ def build_html(data):
 
     dossier_html = "\n".join(render_dossier_cell(item) for item in dossier_items)
     unclear_html = render_unclear_block(unclear_item)
-    score_rows_html = "\n".join(render_score_row(row, i) for i, row in enumerate(scorecard.get("rows", [])))
+    default_row_max = scorecard.get("max_score_per_row", scorecard.get("section_score_total", 2))
+    score_rows_html = "\n".join(render_score_row(row, i, default_row_max) for i, row in enumerate(scorecard.get("rows", [])))
     leaks_html = "\n".join(render_leak(i + 1, leak) for i, leak in enumerate(data.get("leaks", [])))
     strengths_html = "".join(f"<li>{esc(item)}</li>" for item in data.get("strengths", []))
     rewrites_html = "\n".join(render_rewrite(item) for item in data.get("section_rewrites", []))
     pricing_html = "\n".join(render_pricing_option(item) for item in pricing.get("options", []))
     action_html = "\n".join([render_action_column("FIX THIS FIRST", action_plan.get("fix_this_first", []), "orange"), render_action_column("THEN TEST THIS", action_plan.get("then_test", []), "teal"), render_action_column("DO NOT CHANGE YET", action_plan.get("do_not_change_yet", []), "neutral")])
     funnel_steps = action_plan.get("funnel_flow", [])
-    funnel_html = "".join(f'<span class="funnel-step">{esc(step)}</span>{'<span class="funnel-arrow">→</span>' if i < len(funnel_steps)-1 else ''}' for i, step in enumerate(funnel_steps))
+    funnel_parts = []
+    for i, step in enumerate(funnel_steps):
+        funnel_parts.append(f'<span class="funnel-step">{esc(step)}</span>')
+        if i < len(funnel_steps) - 1:
+            funnel_parts.append('<span class="funnel-arrow">→</span>')
+    funnel_html = "".join(funnel_parts)
     blunt = action_plan.get("blunt_recommendation") or {}
     blunt_headline = blunt.get("headline") or verdict.get("quote") or verdict.get("headline", "")
     blunt_body = blunt.get("body") or verdict.get("summary", "")
@@ -213,8 +267,8 @@ def build_html(data):
     .dossier-grid {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0; margin-top:24px; border-top:1px solid var(--hairline); border-left:1px solid var(--hairline); }} .dossier-cell {{ min-height:100%; padding:22px; border-right:1px solid var(--hairline); border-bottom:1px solid var(--hairline); }} .dossier-copy,.dossier-copy p {{ color:var(--ink); font-size:19px; line-height:1.65; }}
     .unclear-callout {{ margin-top:24px; padding:20px; border-left:4px solid var(--orange); background:var(--orange-soft); }} .unclear-callout ul {{ margin:0; padding:0; list-style:none; color:var(--ink); font-size:19px; line-height:1.55; }} .unclear-callout li+li {{ margin-top:4px; }}
     .score-title {{ margin:0 0 20px; font-size:clamp(26px,3.5vw,34px); }} .score-kpi {{ display:flex; align-items:center; gap:16px; margin-bottom:12px; }} .score-track {{ flex:1; height:12px; overflow:hidden; border-radius:2px; background:#F0E8D8; }} .score-fill {{ height:100%; background:var(--orange); }} .score-percent {{ color:var(--orange); font-family:"DM Mono",ui-monospace,monospace; font-size:17px; font-weight:500; white-space:nowrap; }} .score-interpretation {{ margin-bottom:24px; color:var(--orange); font-family:"DM Mono",ui-monospace,monospace; font-size:12px; letter-spacing:.12em; text-transform:uppercase; line-height:1.5; }}
-    .score-table {{ overflow:hidden; border:1px solid var(--hairline); }} .score-header,.score-row {{ display:grid; grid-template-columns:minmax(150px,1fr) auto minmax(240px,2fr); gap:16px; align-items:start; padding:14px 22px; }} .score-header {{ background:var(--panel); color:var(--cream); }} .score-header span {{ font-family:"DM Mono",ui-monospace,monospace; font-size:12px; letter-spacing:.14em; text-transform:uppercase; }} .score-header span:nth-child(2) {{ text-align:center; padding:0 14px; }}
-    .score-row {{ border-bottom:1px solid var(--hairline); transition:background .15s ease; }} .score-row:last-child {{ border-bottom:0; }} .score-row:hover {{ background:var(--warm-2); }} .row-cream {{ background:var(--cream); }} .row-warm {{ background:var(--warm); }} .score-area {{ color:var(--ink); font-size:19px; font-weight:600; line-height:1.45; }} .score-center {{ display:flex; flex-direction:column; align-items:center; gap:5px; min-width:64px; padding:0 8px; }} .score-badge {{ display:inline-flex; width:30px; height:30px; align-items:center; justify-content:center; border-radius:2px; border:1px solid currentColor; background:var(--cream); font-family:"DM Mono",ui-monospace,monospace; font-size:14px; font-weight:500; }} .score-zero {{ color:#8F2B18; background:#FDF0E8; }} .score-low {{ color:#B17816; background:#FFF7DD; }} .score-mid,.score-high {{ color:var(--teal); background:var(--teal-soft); }} .score-status {{ color:var(--muted); font-family:"DM Mono",ui-monospace,monospace; font-size:11px; text-transform:none; }} .score-notes {{ color:var(--muted); font-size:19px; line-height:1.6; }}
+    .score-table {{ overflow:hidden; border:1px solid var(--hairline); }} .score-header,.score-row {{ display:grid; grid-template-columns:minmax(150px,1fr) minmax(104px,auto) minmax(240px,2fr); gap:16px; align-items:start; padding:14px 22px; }} .score-header {{ background:var(--panel); color:var(--cream); }} .score-header span {{ font-family:"DM Mono",ui-monospace,monospace; font-size:12px; letter-spacing:.14em; text-transform:uppercase; }} .score-header span:nth-child(2) {{ text-align:center; padding:0 14px; }}
+    .score-row {{ border-bottom:1px solid var(--hairline); transition:background .15s ease; }} .score-row:last-child {{ border-bottom:0; }} .score-row:hover {{ background:var(--warm-2); }} .row-cream {{ background:var(--cream); }} .row-warm {{ background:var(--warm); }} .score-area {{ color:var(--ink); font-size:19px; font-weight:600; line-height:1.45; }} .score-center {{ display:flex; flex-direction:column; align-items:center; gap:5px; min-width:104px; padding:0 8px; }} .score-badge {{ display:inline-flex; width:30px; height:30px; align-items:center; justify-content:center; border-radius:2px; border:1px solid currentColor; background:var(--cream); font-family:"DM Mono",ui-monospace,monospace; font-size:14px; font-weight:500; }} .score-mini-track {{ width:88px; height:6px; overflow:hidden; border:1px solid var(--hairline); border-radius:999px; background:#F0E8D8; }} .score-mini-fill {{ height:100%; background:var(--orange); }} .score-mini-label {{ color:var(--orange); font-family:"DM Mono",ui-monospace,monospace; font-size:10px; font-weight:500; line-height:1; }} .score-zero {{ color:#8F2B18; background:#FDF0E8; }} .score-low {{ color:#B17816; background:#FFF7DD; }} .score-mid {{ color:var(--teal); background:var(--teal-soft); }} .score-high {{ color:var(--teal); background:var(--teal-soft); }} .score-status {{ color:var(--muted); font-family:"DM Mono",ui-monospace,monospace; font-size:11px; text-transform:none; }} .score-notes {{ color:var(--muted); font-size:19px; line-height:1.6; }}
     .section-intro {{ max-width:68ch; margin-bottom:28px; color:var(--muted); font-size:19px; line-height:1.65; }} .leak-card {{ margin:24px 0 0; padding:26px 30px 28px; border-left:4px solid var(--orange); background:var(--orange-soft); }} .leak-card:first-of-type {{ margin-top:24px; }} .leak-card > * {{ max-width:780px; }} .leak-number {{ display:flex; gap:6px; align-items:baseline; margin-bottom:7px; color:var(--orange); font-family:"DM Mono",ui-monospace,monospace; font-size:12px; font-weight:500; letter-spacing:.09em; text-transform:uppercase; }} .leak-number strong {{ font-size:14px; letter-spacing:.01em; }} .leak-card h3 {{ margin-bottom:13px; font-size:clamp(22px,2.4vw,27px); line-height:1.18; }} .leak-grid {{ display:grid; grid-template-columns:1fr; gap:12px; margin-top:16px; }} .leak-grid .mono-label {{ margin-bottom:4px; color:var(--orange); letter-spacing:.09em; }} .leak-grid p,.plain-list {{ color:#4F3A24; font-size:19px; line-height:1.56; }} .leak-grid div:nth-child(3) p:not(.mono-label) {{ color:var(--orange); font-weight:600; }} .plain-list {{ margin:0; padding-left:0; list-style:none; }} .plain-list li {{ position:relative; padding-left:18px; }} .plain-list li::before {{ content:"→"; position:absolute; left:0; color:var(--orange); }} .plain-list li+li {{ margin-top:3px; }}
     .strength-list {{ margin:8px 0 0; padding:0; list-style:none; }} .strength-list li {{ margin:0 0 8px; padding:12px 20px; border-left:4px solid var(--green,#4A7C59); background:#EEF5F0; color:var(--ink); font-size:19px; line-height:1.45; }}
     .rewrite-card {{ margin-bottom:40px; padding:0; border-top:0; }} .rewrite-card:first-of-type {{ border-top:0; }} .rewrite-card h3 {{ margin-bottom:12px; font-family:"Source Serif 4",Georgia,serif; font-size:23px; font-weight:700; letter-spacing:0; line-height:1.35; }} .rewrite-grid {{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:18px; border:0; }} .rewrite-grid-three {{ grid-template-columns:repeat(3,minmax(0,1fr)); }} .rewrite-grid.single {{ grid-template-columns:1fr; }} .rewrite-column {{ padding:18px; border:1px solid var(--hairline); background:var(--cream); }} .rewrite-column+.rewrite-column {{ border-left:1px solid var(--teal); }} .rewrite-column .mono-label {{ color:var(--orange); }} .rewrite-copy {{ color:var(--ink); font-family:"Source Serif 4",Georgia,serif; font-size:20px; font-weight:400; line-height:1.7; }} .quote-copy {{ font-style:italic; hanging-punctuation:first last; }} .rewrite-current .quote-copy {{ color:var(--muted); }} .rewrite-after,.rewrite-strongest {{ background:var(--teal-soft); border-color:var(--teal); }} .rewrite-after .mono-label,.rewrite-strongest .mono-label {{ color:var(--teal); }} .rewrite-strongest {{ border-width:2px; }} .rewrite-strongest .quote-copy {{ font-weight:600; font-style:normal; }}
@@ -223,7 +277,7 @@ def build_html(data):
     .funnel-box {{ margin-top:24px; padding:0; border-top:0; }} .funnel-flow {{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; max-width:84ch; }} .funnel-step {{ display:inline-block; padding:8px 16px; background:var(--teal); color:var(--cream); font-size:17px; font-weight:600; line-height:1.4; }} .funnel-arrow {{ color:var(--ink); font-size:19px; }}
     .blunt-recommendation {{ margin-top:32px; padding:40px; background:var(--panel); color:var(--cream); }} .blunt-recommendation .mono-label {{ margin-bottom:16px; color:var(--hairline); }} .blunt-recommendation h3 {{ margin:0 0 16px; color:var(--cream); font-family:"Playfair Display",Georgia,serif; font-size:clamp(24px,3vw,32px); font-weight:900; line-height:1.35; letter-spacing:-.015em; }} .blunt-recommendation p {{ color:var(--hairline); font-size:19px; line-height:1.65; }}
     .footer {{ border-top:2px solid var(--ink); padding:34px 0; background:var(--bg); }} .footer-inner {{ max-width:var(--page-width); margin:0 auto; padding:0 32px; display:flex; align-items:flex-start; justify-content:space-between; gap:28px; }} .footer-title,.score-label {{ color:var(--muted); font-family:"DM Mono",ui-monospace,monospace; font-size:12px; letter-spacing:.16em; text-transform:uppercase; }} .footer-subtitle {{ margin-top:4px; color:#A99378; font-family:"DM Mono",ui-monospace,monospace; font-size:12px; }} .score-value {{ margin-top:2px; color:var(--orange); font-family:"Playfair Display",Georgia,serif; font-size:34px; font-weight:900; line-height:1; text-align:right; }}
-    @media (max-width:760px) {{ body {{ font-size:19px; }} .rewrite-grid-three {{ grid-template-columns:1fr; }} .nav-inner {{ padding:8px 16px; }} .hero,main {{ padding-left:20px; padding-right:20px; }} .hero {{ padding-top:42px; }} h1 {{ font-size:clamp(42px,12vw,56px); }} .section {{ margin-bottom:48px; }} .dossier-grid,.leak-grid,.rewrite-grid,.pricing-grid,.action-grid {{ grid-template-columns:1fr; }} .rewrite-column+.rewrite-column {{ border-left:0; border-top:1px solid var(--hairline); }} .score-header {{ display:none; }} .score-row {{ grid-template-columns:1fr; gap:8px; padding:16px; }} .score-center {{ align-items:flex-start; flex-direction:row; min-width:0; padding:0; }} .footer-inner {{ padding:0 20px; }} .score-value {{ text-align:left; }} }}
+    @media (max-width:760px) {{ body {{ font-size:19px; }} .rewrite-grid-three {{ grid-template-columns:1fr; }} .nav-inner {{ padding:8px 16px; }} .hero,main {{ padding-left:20px; padding-right:20px; }} .hero {{ padding-top:42px; }} h1 {{ font-size:clamp(42px,12vw,56px); }} .section {{ margin-bottom:48px; }} .dossier-grid,.leak-grid,.rewrite-grid,.pricing-grid,.action-grid {{ grid-template-columns:1fr; }} .rewrite-column+.rewrite-column {{ border-left:0; border-top:1px solid var(--hairline); }} .score-header {{ display:none; }} .score-row {{ grid-template-columns:1fr; gap:8px; padding:16px; }} .score-center {{ align-items:flex-start; min-width:0; padding:0; }} .footer-inner {{ padding:0 20px; }} .score-value {{ text-align:left; }} }}
   </style>
 </head>
 <body>

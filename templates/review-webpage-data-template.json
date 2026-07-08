@@ -34,10 +34,11 @@
     "score_obtained": 8,
     "score_total": 26,
     "percent": 31,
+    "max_score_per_row": 2,
     "interpretation": "DO NOT SCALE. REBUILD THE OFFER AND THE PURCHASE FLOW FIRST.",
     "rows": [
-      {"area": "Market", "score": 2, "status": "Strong", "notes": "Why"},
-      {"area": "Dream Outcome", "score": 1, "status": "Weak", "notes": "Why"}
+      {"area": "Market", "score": 2, "score_max": 2, "status": "Strong", "notes": "Why"},
+      {"area": "Dream Outcome", "score": 1, "score_max": 2, "status": "Weak", "notes": "Why"}
     ]
   },
   "leaks": [
